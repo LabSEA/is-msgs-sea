@@ -1,8 +1,9 @@
 name: Publish to PyPI
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
 
 permissions:
   contents: read
@@ -30,6 +31,16 @@ jobs:
 
       - name: Build distributions
         run: python -m build
+
+      - name: Verify tag matches package version
+        shell: bash
+        run: |
+          package_version="$(cat .version)"
+          tag_version="${GITHUB_REF_NAME#v}"
+          test "$package_version" = "$tag_version" || {
+            echo "Tag v$tag_version does not match package version $package_version"
+            exit 1
+          }
 
       - name: Check distributions
         run: twine check --strict dist/*
