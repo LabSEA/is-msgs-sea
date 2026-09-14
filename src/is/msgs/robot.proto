@@ -1,0 +1,143 @@
+syntax = "proto3";
+
+package is.robot;
+
+option java_package = "com.is.robot";
+option java_multiple_files = true;
+
+import "is/msgs/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// Define messages for the robot gateway and controller services
+
+message RangeScan {
+  repeated float angles = 1;
+  repeated float ranges = 2;
+  common.Header header = 3;
+  float angle_min = 4;
+  float angle_max = 5;
+  float angle_increment = 6;
+  float time_increment = 7;
+  float scan_time = 8;
+  float range_min = 9;
+  float range_max = 10;
+  repeated float intensities = 11;
+}
+
+message Imu {
+  common.Header header = 1;
+  common.Quaternion orientation = 2;
+  repeated double orientation_covariance = 3 [packed=true];
+  common.Vector3 angular_velocity = 4;
+  repeated double angular_velocity_covariance = 5 [packed=true];
+  common.Vector3 linear_acceleration = 6;
+  repeated double linear_acceleration_covariance = 7 [packed=true];
+}
+
+message Odometry {
+  common.Header header = 1;
+  string child_frame_id = 2;
+  common.PoseWithCovariance pose = 3;
+  common.SpeedWithCovariance twist = 4;
+}
+
+enum PointFieldDataType {
+  POINT_FIELD_DATATYPE_UNSPECIFIED = 0;
+  POINT_FIELD_INT8 = 1;
+  POINT_FIELD_UINT8 = 2;
+  POINT_FIELD_INT16 = 3;
+  POINT_FIELD_UINT16 = 4;
+  POINT_FIELD_INT32 = 5;
+  POINT_FIELD_UINT32 = 6;
+  POINT_FIELD_FLOAT32 = 7;
+  POINT_FIELD_FLOAT64 = 8;
+}
+
+message PointField {
+  string name = 1;
+  uint32 offset = 2;
+  PointFieldDataType datatype = 3;
+  uint32 count = 4;
+}
+
+// Binary point cloud preserving the sensor_msgs/PointCloud2 layout.
+message PointCloud {
+  common.Header header = 1;
+  uint32 height = 2;
+  uint32 width = 3;
+  repeated PointField fields = 4;
+  bool is_bigendian = 5;
+  uint32 point_step = 6;
+  uint32 row_step = 7;
+  bytes data = 8;
+  bool is_dense = 9;
+}
+
+message RobotConfig { common.Speed speed = 1; }
+
+message BasicMoveTask {
+  // (Optional) List of positions indicating the desired path.
+  repeated common.Position positions = 1;
+  /* (Optional) List of speeds to be executed at each respective position of a
+   * trajectory. If present, should have the same size as the positions field.
+   */
+  repeated common.Speed speeds = 2;
+  // (Optional) Desired orientation of the robot after finishing the task.
+  common.Orientation final_orientation = 3;
+  /* (Required) Error value where the controller can consider that the point was
+   * reached successfully. */
+  float allowed_error = 4;
+  // (Required) Controller loop frequency in hertz.
+  float rate = 5;
+}
+
+message RobotTaskRequest {
+  // (Optional) Task id, if none is provided one will be generated.
+  uint64 id = 1;
+
+  oneof Task { BasicMoveTask basic_move_task = 2; }
+}
+
+message RobotTaskReply {
+  // Unique identifier of the task.
+  uint64 id = 1;
+}
+
+message RobotControllerProgress {
+  // Unique identifier of the task.
+  uint64 id = 9;
+  // Speed command sent to the robot in order to make the current pose equals to
+  // the desired one.
+  common.Speed current_speed = 1;
+  // Pose where the robot actually is.
+  common.Pose current_pose = 2;
+  // Pose where the robot should be now.
+  common.Pose desired_pose = 3;
+  // Robot positioning error for the current task.
+  float error = 4;
+  // Percentage indicating how much of the task has been completed yet.
+  float completion = 5;
+  // Sources used to locate the robot.
+  repeated string sources = 6;
+  // Timestamp of when the task started.
+  google.protobuf.Timestamp begin = 7;
+  // Timestamp of when the task finished.
+  google.protobuf.Timestamp end = 8;
+}
+
+message PathRequest{
+  // Unique identifier of the request.
+  uint64 id = 1;
+
+  // Destination pose.
+  common.Pose destination_pose = 2;
+
+  // Robot Gateway ID.
+  uint64 robot_gateway_id = 3;
+
+  // Robot Task Rate.
+  float rate = 4;
+
+  // Robot Task Allowed Error.
+  float allowed_error = 5;
+}

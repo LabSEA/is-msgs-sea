@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package is.ros;
+
+option java_package = "com.is.ros";
+option java_multiple_files = true;
+
+import "google/protobuf/struct.proto";
+import "is_msgs/common.proto";
+
+// Dynamic fallback for ROS message types without a native is-msgs schema.
+message ROSMessage {
+  string type = 1;
+  google.protobuf.Struct content = 2;
+}
+
+message TFMessage {
+  repeated is.common.TransformStamped transforms = 1;
+}

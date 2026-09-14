@@ -1,0 +1,31 @@
+{
+  "name": "is-msgs",
+  "version": "1.0.0",
+  "description": "is-msgs ==========",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "dependencies": {
+    "google-protobuf": "^3.5.0"
+  },
+  "devDependencies": {
+    "browserify": "^16.2.2",
+    "uglify-js": "^3.3.27"
+  },
+  "scripts": {
+    "generate": "mkdir -p gen_js && protoc --proto_path=. --js_out=import_style=commonjs,binary:gen_js is/msgs/*.proto",
+    "browserify": "node_modules/.bin/browserify gen_js/is/msgs/*.js > gen_js/is_msgs.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/LabSEA/is-msgs-sea.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/LabSEA/is-msgs-sea/issues"
+  },
+  "homepage": "https://github.com/LabSEA/is-msgs-sea#readme"
+}

@@ -1,0 +1,8 @@
+include .version
+include CHANGELOG.md COMPATIBILITY.md LICENSE.txt MIGRATION.md README.md
+recursive-include docs *.md
+recursive-include scripts *.py
+recursive-include src *.proto
+exclude CMakeLists.txt conanfile.py bootstrap.sh build.sh
+exclude src/CMakeLists.txt
+prune src/is/utils

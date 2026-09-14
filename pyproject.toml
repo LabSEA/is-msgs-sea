@@ -1,0 +1,84 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "is-msgs-sea"
+dynamic = ["version"]
+description = "Standard Protocol Buffers messages for the IS architecture"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE.txt"]
+authors = [
+  { name = "LabVISIO", email = "labvisio.ufes@gmail.com" },
+  { name = "LabSEA", email = "labsea.gua@gmail.com" },
+]
+classifiers = [
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3 :: Only",
+]
+dependencies = ["protobuf>=5.29,<8"]
+
+[project.optional-dependencies]
+codegen = ["grpcio-tools==1.69.0"]
+dev = [
+  "basedpyright>=1.31,<2",
+  "build>=1.5,<2",
+  "pytest>=8.3,<10",
+  "ruff>=0.12,<1",
+  "tox>=4.25,<5",
+  "twine>=6,<8",
+]
+
+[project.urls]
+Homepage = "https://github.com/LabSEA/is-msgs-sea"
+Repository = "https://github.com/LabSEA/is-msgs-sea"
+
+[tool.setuptools]
+package-dir = { "" = "python" }
+include-package-data = true
+
+[tool.setuptools.dynamic]
+version = { file = [".version"] }
+
+[tool.setuptools.packages.find]
+where = ["python"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+is_msgs = ["*.proto", "*.pyi", "py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["python/tests"]
+
+[tool.ruff]
+line-length = 99
+target-version = "py310"
+extend-exclude = ["python/is_msgs/*_pb2.py", "python/is_msgs/*_pb2.pyi"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+envlist = py310,py311,py312,py313,py314,lint
+
+[testenv]
+extras = dev,codegen
+commands = pytest {posargs:python/tests}
+
+[testenv:lint]
+basepython = python3.10
+extras = dev
+commands =
+    ruff check python scripts
+    basedpyright python/tests/unit/test_is_msgs.py
+"""
