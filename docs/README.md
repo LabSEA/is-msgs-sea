@@ -914,6 +914,7 @@ Models an annotation on an object (in an image or in space).
 | score | [float](#float) |  | Represents how sure the annotator thinks that an object of the specified type exists on the region. |
 | region | [BoundingPoly](#is-vision-BoundingPoly) |  | Identifies the region in the image/space where the object is contained NOTE: When defined on an image the vertex coordinates are in the same scale (resolution) as the original image. |
 | keypoints | [PointAnnotation](#is-vision-PointAnnotation) | repeated | Annotations of interesting points in the image. e.g: Hip, Nose, Eye. NOTE: When defined on an image the vertex coordinates are in the same scale (resolution) as the original image. |
+| embedding | [float](#float) | repeated | L2-normalized person re-identification feature vector. |
 
 
 

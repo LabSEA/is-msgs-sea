@@ -5,7 +5,8 @@ from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
+from collections.abc import Iterable as _Iterable, Mapping as _Mapping
+from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -191,18 +192,20 @@ class PointAnnotation(_message.Message):
     def __init__(self, id: _Optional[int] = ..., score: _Optional[float] = ..., position: _Optional[_Union[Vertex, _Mapping]] = ...) -> None: ...
 
 class ObjectAnnotation(_message.Message):
-    __slots__ = ("label", "id", "score", "region", "keypoints")
+    __slots__ = ("label", "id", "score", "region", "keypoints", "embedding")
     LABEL_FIELD_NUMBER: _ClassVar[int]
     ID_FIELD_NUMBER: _ClassVar[int]
     SCORE_FIELD_NUMBER: _ClassVar[int]
     REGION_FIELD_NUMBER: _ClassVar[int]
     KEYPOINTS_FIELD_NUMBER: _ClassVar[int]
+    EMBEDDING_FIELD_NUMBER: _ClassVar[int]
     label: str
     id: int
     score: float
     region: BoundingPoly
     keypoints: _containers.RepeatedCompositeFieldContainer[PointAnnotation]
-    def __init__(self, label: _Optional[str] = ..., id: _Optional[int] = ..., score: _Optional[float] = ..., region: _Optional[_Union[BoundingPoly, _Mapping]] = ..., keypoints: _Optional[_Iterable[_Union[PointAnnotation, _Mapping]]] = ...) -> None: ...
+    embedding: _containers.RepeatedScalarFieldContainer[float]
+    def __init__(self, label: _Optional[str] = ..., id: _Optional[int] = ..., score: _Optional[float] = ..., region: _Optional[_Union[BoundingPoly, _Mapping]] = ..., keypoints: _Optional[_Iterable[_Union[PointAnnotation, _Mapping]]] = ..., embedding: _Optional[_Iterable[float]] = ...) -> None: ...
 
 class ObjectAnnotations(_message.Message):
     __slots__ = ("objects", "resolution", "frame_id")

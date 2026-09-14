@@ -164,6 +164,9 @@ message ObjectAnnotation {
      NOTE: When defined on an image the vertex coordinates are in the same scale
      (resolution) as the original image. */
   repeated PointAnnotation keypoints = 5;
+
+  // L2-normalized person re-identification feature vector.
+  repeated float embedding = 6 [packed = true];
 }
 
 /* Models many annotated objects. (List of objects and their respective annotations).
