@@ -62,6 +62,8 @@ cover/
 # Environments
 .env
 .venv
+.venv-cpp/
+.conan2/
 uv.lock
 env/
 venv/

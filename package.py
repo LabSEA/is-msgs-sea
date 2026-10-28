@@ -16,7 +16,7 @@ def main():
                     -o:h is-msgs/*:shared={shared} \
                     -o:h is-msgs/*:build_tests=False
             """
-            subprocess.call(['bash', '-c', command])
+            subprocess.run(['bash', '-c', command], check=True)
 
 
 if __name__ == "__main__":

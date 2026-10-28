@@ -1,60 +1,72 @@
-"""Generate and stage the Python protobuf modules reproducibly."""
+"""Generate Python artifacts in staging before replacing any packaged files."""
 
-import shutil
+import os
 import tempfile
 from importlib.resources import files
 from pathlib import Path
 
-from grpc_tools import protoc
+from is_msgs.utils.build import transform_imports
+from schema_manifest import discover_schemas
 
 
 def transform(source: str) -> str:
-    return source.replace('import "is/msgs/', 'import "is_msgs/')
+    return transform_imports(source)
 
 
-def main() -> int:
-    root = Path(__file__).resolve().parents[1]
-    source_dir = root / "src" / "is" / "msgs"
-    package_dir = root / "python" / "is_msgs"
-    package_dir.mkdir(parents=True, exist_ok=True)
+def generate(root: Path) -> int:
+    from grpc_tools import protoc
 
-    protos = sorted(source_dir.glob("*.proto"))
-    generated_names = {
-        suffix
-        for proto in protos
-        for suffix in (f"{proto.stem}_pb2.py", f"{proto.stem}_pb2.pyi", proto.name)
-    }
-    for artifact in generated_names:
-        (package_dir / artifact).unlink(missing_ok=True)
-
-    with tempfile.TemporaryDirectory(prefix="is-msgs-codegen-") as temp:
+    protos = discover_schemas(root)
+    package_dir = root / "python/is_msgs"
+    # Use the destination filesystem so each os.replace is atomic.
+    package_dir.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".is-msgs-codegen-", dir=package_dir.parent) as temp:
         staging = Path(temp)
         transformed_dir = staging / "is_msgs"
         transformed_dir.mkdir()
         for proto in protos:
-            (transformed_dir / proto.name).write_text(transform(proto.read_text()))
-
-        grpc_include = files("grpc_tools") / "_proto"
+            (transformed_dir / proto.name).write_text(
+                transform(proto.read_text(encoding="utf-8")), encoding="utf-8"
+            )
         result = protoc.main(
             [
                 "grpc_tools.protoc",
                 f"--proto_path={staging}",
-                f"--proto_path={grpc_include}",
-                f"--python_out={root / 'python'}",
-                f"--pyi_out={root / 'python'}",
+                f"--proto_path={files('grpc_tools') / '_proto'}",
+                f"--python_out={staging}",
+                f"--pyi_out={staging}",
                 *[str(transformed_dir / proto.name) for proto in protos],
             ]
         )
         if result:
             return result
-
-        for proto in protos:
-            shutil.copy2(transformed_dir / proto.name, package_dir / proto.name)
-
-    typed_marker = package_dir / "py.typed"
-    if not typed_marker.exists():
-        typed_marker.touch()
+        expected = {
+            name
+            for proto in protos
+            for name in (proto.name, f"{proto.stem}_pb2.py", f"{proto.stem}_pb2.pyi")
+        }
+        for name in expected:
+            if not (transformed_dir / name).is_file():
+                raise RuntimeError(f"protoc did not produce {name}")
+        package_dir.mkdir(exist_ok=True)
+        stale = {
+            path
+            for pattern in ("*.proto", "*_pb2.py", "*_pb2.pyi")
+            for path in package_dir.glob(pattern)
+            if path.name not in expected
+        }
+        for name in sorted(expected):
+            artifact, target = transformed_dir / name, package_dir / name
+            if not target.exists() or target.read_bytes() != artifact.read_bytes():
+                os.replace(artifact, target)
+        for path in stale:
+            path.unlink()
+        (package_dir / "py.typed").touch(exist_ok=True)
     return 0
+
+
+def main() -> int:
+    return generate(Path(__file__).resolve().parents[1])
 
 
 if __name__ == "__main__":

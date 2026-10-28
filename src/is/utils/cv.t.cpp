@@ -83,4 +83,51 @@ TEST(CVTests, OperationEquivalence) {
   ASSERT_TRUE(cv::countNonZero(with_view == R) != 0);
 }
 
+TEST(CVTests, RejectMalformedBuffersAndShapes) {
+  EXPECT_TRUE(is::to_mat_view(nullptr).empty());
+  auto tensor = is::to_tensor(cv::Mat(2, 3, CV_32S, cv::Scalar::all(10)));
+  tensor.mutable_ints32()->RemoveLast();
+  EXPECT_TRUE(is::to_mat(tensor).empty());
+  EXPECT_TRUE(is::to_mat_view(&tensor).empty());
+  tensor.add_ints32(10);
+  tensor.add_ints32(10);
+  EXPECT_TRUE(is::to_mat(tensor).empty());
+  EXPECT_TRUE(is::to_mat_view(&tensor).empty());
+  tensor.mutable_shape()->mutable_dims(0)->set_size(-1);
+  EXPECT_TRUE(is::to_mat(tensor).empty());
+  tensor.mutable_shape()->mutable_dims(0)->set_size(0);
+  EXPECT_TRUE(is::to_mat_view(&tensor).empty());
+  tensor.mutable_shape()->mutable_dims(0)->set_size(std::numeric_limits<int>::max());
+  EXPECT_TRUE(is::to_mat(tensor).empty());
+  EXPECT_TRUE(is::to_mat_view(&tensor).empty());
+  tensor = is::to_tensor(cv::Mat(2, 3, CV_32F, cv::Scalar::all(10)));
+  tensor.mutable_floats()->Clear();
+  EXPECT_TRUE(is::to_mat(tensor).empty());
+  EXPECT_TRUE(is::to_mat_view(&tensor).empty());
+  tensor = is::to_tensor(cv::Mat(2, 3, CV_64F, cv::Scalar::all(10)));
+  tensor.add_doubles(10);
+  EXPECT_TRUE(is::to_mat(tensor).empty());
+  EXPECT_TRUE(is::to_mat_view(&tensor).empty());
+}
+
+TEST(CVTests, RejectUnsupportedMatrixLayouts) {
+  EXPECT_FALSE(is::to_tensor(cv::Mat(2, 3, CV_8UC3)).has_shape());
+  int sizes[] = {2, 3, 4};
+  EXPECT_FALSE(is::to_tensor(cv::Mat(3, sizes, CV_32F)).has_shape());
+  EXPECT_FALSE(is::to_tensor(cv::Mat()).has_shape());
+  EXPECT_FALSE(is::to_tensor(cv::Mat(2, 3, CV_16F)).has_shape());
+}
+
+TEST(CVTests, NonContiguousMatrixAndCopyOwnership) {
+  cv::Mat matrix = (cv::Mat_<float>(3, 4) << 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12);
+  auto roi = matrix(cv::Rect(1, 1, 2, 2));
+  ASSERT_FALSE(roi.isContinuous());
+  auto tensor = is::to_tensor(roi);
+  auto copy = is::to_mat(tensor);
+  EXPECT_EQ(cv::countNonZero(copy != roi), 0);
+  copy.at<float>(0, 0) = -1;
+  EXPECT_EQ(tensor.floats(0), 6);
+  EXPECT_EQ(roi.at<float>(0, 0), 6);
+}
+
 }  // namespace

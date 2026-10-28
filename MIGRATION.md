@@ -1,6 +1,6 @@
 # Migrando do is-msgs 1.1.18
 
-1. Remova `is-msgs` e instale `is-msgs-sea==1.3.0`. As duas distribuições usam
+1. Remova `is-msgs` e instale `is-msgs-sea`. As duas distribuições usam
    o mesmo pacote `is_msgs` e não podem coexistir.
 2. Mantenha imports existentes, como `from is_msgs.common_pb2 import Pose`.
 3. Consumidores existentes de Pose, Speed, Position, Orientation e RangeScan

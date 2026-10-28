@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.15)
+project(is_msgs_consumer LANGUAGES CXX)
+
+if(NOT DEFINED IS_MSGS_EXPECTED_VERSION)
+  message(FATAL_ERROR "Set IS_MSGS_EXPECTED_VERSION to the version under test")
+endif()
+find_package(is-msgs ${IS_MSGS_EXPECTED_VERSION} EXACT CONFIG REQUIRED)
+add_executable(consumer main.cpp)
+target_link_libraries(consumer PRIVATE is-msgs::is-msgs)
+enable_testing()
+add_test(NAME installed_consumer COMMAND consumer)

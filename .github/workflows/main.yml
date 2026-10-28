@@ -2,7 +2,12 @@ name: Main
 
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
   python:
@@ -36,13 +41,73 @@ jobs:
           git fetch https://github.com/labvisio/is-msgs.git
           refs/tags/v1.1.18:refs/tags/v1.1.18
       - run: python -m pip install '.[dev,codegen]'
+      - run: pytest
       - run: python scripts/check_descriptor_compatibility.py
+      - run: python scripts/check_descriptor_compatibility.py --latest-release
       - run: python scripts/generate_python.py
       - run: git diff --exit-code
-      - run: ruff check python scripts
+      - run: ruff check python scripts conanfile.py package.py test_package/conanfile.py
       - run: basedpyright python/tests/unit/test_is_msgs.py
 
+  cpp:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shared: ["ON", "OFF"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake g++ make libprotobuf-dev protobuf-compiler libfmt-dev \
+            libboost-filesystem-dev libgtest-dev libopencv-dev
+      - name: Build, test and install
+        run: |
+          cmake -S . -B build/native -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=${{ matrix.shared }} -Dbuild_tests=ON \
+            -DCMAKE_INSTALL_PREFIX="$RUNNER_TEMP/is-msgs-install"
+          cmake --build build/native --parallel 2
+          ctest --test-dir build/native --output-on-failure
+          cmake --install build/native
+      - name: Test the installed CMake package
+        run: |
+          cmake -S test_package -B build/consumer -DCMAKE_BUILD_TYPE=Release \
+            -DIS_MSGS_EXPECTED_VERSION="$(cat .version)" \
+            -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/is-msgs-install"
+          cmake --build build/consumer --parallel 2
+          ctest --test-dir build/consumer --output-on-failure
+
+  conan:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shared: ["True", "False"]
+    env:
+      CONAN_HOME: ${{ github.workspace }}/.conan2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r scripts/cpp-tools.txt
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.CONAN_HOME }}
+          key: ${{ runner.os }}-ubuntu22-conan-${{ matrix.shared }}-${{ hashFiles('conanfile.py', 'scripts/cpp-tools.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-ubuntu22-conan-${{ matrix.shared }}-
+      - run: conan profile detect --exist-ok
+      - name: Create and test the Conan package
+        run: >-
+          conan create . --user=is --channel=stable --build=missing
+          -o 'is-msgs/*:shared=${{ matrix.shared }}'
+          -o 'is-msgs/*:build_tests=False' -c tools.build:jobs=2
+
   artifacts:
+    needs: [python, codegen-and-compatibility, cpp, conan]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,9 +117,13 @@ jobs:
       - run: python -m pip install build twine
       - run: python -m build
       - run: twine check --strict dist/*
-      - run: python -m pip install --force-reinstall dist/*.whl
-      - run: python -c "from is_msgs.ros_pb2 import TFMessage; assert TFMessage.DESCRIPTOR.full_name == 'is.ros.TFMessage'"
+      - name: Install wheel in a clean environment and test outside the checkout
+        run: |
+          python -m venv "$RUNNER_TEMP/msgs-wheel"
+          "$RUNNER_TEMP/msgs-wheel/bin/python" -m pip install dist/*.whl pytest
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/msgs-wheel/bin/python" -I -m pytest "$GITHUB_WORKSPACE/python/tests/unit/test_is_msgs.py"
       - uses: actions/upload-artifact@v4
         with:
-          name: is-msgs-sea-1.2.0
+          name: is-msgs-sea-distributions
           path: dist/*

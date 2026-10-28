@@ -5,7 +5,7 @@ A distribuição se chama `is-msgs-sea`; o pacote de import continua sendo
 
 ```shell
 uv remove is-msgs
-uv add is-msgs-sea==1.3.0
+uv add is-msgs-sea
 ```
 
 Python 3.10 a 3.14 e Protobuf 5 a 7 são suportados. Não instale
@@ -17,7 +17,7 @@ Instale o compilador opcional e invoque o módulo sem alterar o diretório do
 projeto:
 
 ```shell
-uv add 'is-msgs-sea[codegen]==1.3.0'
+uv add 'is-msgs-sea[codegen]'
 uv run python -m is_msgs.utils.build --output generated proto/my_service.proto
 ```
 

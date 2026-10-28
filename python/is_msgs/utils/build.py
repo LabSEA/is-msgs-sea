@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import re
 import tempfile
 from importlib.resources import files
 from pathlib import Path
@@ -14,8 +15,27 @@ def get_include() -> str:
     return str(Path(is_msgs.__file__).resolve().parent.parent)
 
 
-def _transform(source: str) -> str:
-    return source.replace('import "is/msgs/', 'import "is_msgs/')
+def transform_imports(source: str) -> str:
+    """Rewrite canonical imports, preserving comments, strings and modifiers."""
+    token_pattern = r'''//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\w+|\s+|.'''
+    tokens = [token for token in re.finditer(token_pattern, source, re.DOTALL)
+              if not token.group().isspace() and not token.group().startswith(("//", "/*"))]
+    replacements = []
+    for index, token in enumerate(tokens):
+        if token.group() != "import":
+            continue
+        index += 1
+        if index < len(tokens) and tokens[index].group() in {"public", "weak"}:
+            index += 1
+        if index >= len(tokens):
+            continue
+        path = tokens[index]
+        value = path.group()
+        if value.startswith(('"is/msgs/', "'is/msgs/")):
+            replacements.append((path.start() + 1, path.start() + 9))
+    for start, end in reversed(replacements):
+        source = source[:start] + "is_msgs/" + source[end:]
+    return source
 
 
 def compile_protos(proto_files, output=".") -> int:
@@ -28,6 +48,8 @@ def compile_protos(proto_files, output=".") -> int:
         ) from error
 
     sources = [Path(proto).resolve() for proto in proto_files]
+    if not sources:
+        raise ValueError("at least one .proto file is required")
     for source in sources:
         if source.suffix != ".proto":
             raise ValueError(f"'{source}' is not a .proto file")
@@ -43,7 +65,8 @@ def compile_protos(proto_files, output=".") -> int:
         for source in sources:
             target = staging / source.relative_to(common_root)
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(_transform(source.read_text()))
+            target.write_text(transform_imports(source.read_text(encoding="utf-8")),
+                              encoding="utf-8")
             transformed.append(target.relative_to(staging))
 
         grpc_include = files("grpc_tools") / "_proto"

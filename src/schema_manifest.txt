@@ -1,0 +1,8 @@
+is/msgs/camera.proto
+is/msgs/common.proto
+is/msgs/image.proto
+is/msgs/power.proto
+is/msgs/robot.proto
+is/msgs/ros.proto
+is/msgs/validate.proto
+is/msgs/tests.proto

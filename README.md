@@ -11,12 +11,17 @@ A documentação das mensagens e de seus campos está na [pasta docs](docs/READM
 
 ## *C++*
 ##### COMPILANDO A PARTIR DO CÓDIGO-FONTE
-Para compilar esta biblioteca, execute primeiro o script de preparação das dependências
-e depois o script de build.
+Instale previamente Python 3.10+, um compilador C++, Make e as ferramentas de
+compilação exigidas pelas dependências. O bootstrap prepara Conan e CMake
+com versões fixadas em um ambiente virtual local, sem instalar pacotes globais:
 ```shell
-./bootstrap.sh # obtém as dependências de build
+./bootstrap.sh # prepara .venv-cpp e um perfil Conan em .conan2
 ./build.sh # compila a biblioteca
 ```
+
+Use `IS_MSGS_PYTHON=/caminho/python ./bootstrap.sh` para escolher o Python.
+`./bootstrap.sh --help` mostra opções de caminhos alternativos. Para usar esses
+caminhos, ative o ambiente criado e defina `CONAN_HOME` antes de executar o build.
 ##### CONAN PACKAGE
 Um artefato Conan está disponível em nosso laboratório. **Entre em contato com os
 mantenedores para obter acesso ao servidor Conan; ele não é público.**
@@ -29,47 +34,24 @@ mantenedores para obter acesso ao servidor Conan; ele não é público.**
 is::common::Tensor tensor;
 ```
 
+As conversões em `is/utils/cv.hpp` aceitam matrizes 2D com um canal. Dimensões,
+tipos ou buffers incompatíveis produzem uma matriz/tensor vazio. A função
+`to_mat` copia os dados; `to_mat_view` compartilha o buffer, que precisa continuar
+vivo e sem realocação enquanto a view for usada.
+
 ## *Javascript / NodeJS*
-Para usar protocol buffers com JavaScript, você precisa do compilador *protoc*; baixe um
-[binário pré-compilado no GitHub](https://github.com/google/protobuf/releases).
-
-Instale as dependências de build e compile os schemas `.proto` para arquivos `.js`:
-```shell
-npm install # obtém as dependências de build
-npm run generate # gera os arquivos js
-```
-
-Para usar no lado do servidor (Node.js), importe e use os arquivos gerados:
-```js
-const common = require("./is/msgs/common_pb.js");
-
-let tensor = new common.Tensor();
-tensor.setDoublesList([1, 2, 3]);
-console.log(tensor.toObject());
-// ...
-```
-
-Para usar no navegador, empacote os arquivos com browserify:
-```shell
-npm run browserify 
-```
-
-Depois, inclua o bundle gerado no navegador:
-```html
-<script src="is_msgs.js"></script>
-<script>
-  var tensor = new proto.is.msgs.common.Tensor();
-  tensor.setDoublesList([1, 2, 3]);
-  console.log(tensor.toObject());
-</script>
-// ...
-```
+O suporte JavaScript é histórico e **não é suportado nesta versão**. Não há
+geração ou publicação Node nos workflows atuais, nem testes JavaScript. O `package.json`
+foi preservado para referência, mas seus comandos usam caminhos antigos e não
+constituem uma receita de build validada. A retomada exige um gerador moderno,
+lockfile e testes de serialização; a remoção deve ocorrer somente em uma major
+futura, após aviso de migração.
 
 ## *Python*
 
 A documentação do pacote Python está em [python/README.md](python/README.md).
 
-The modern Python distribution is `is-msgs-sea==1.3.0`; imports remain
+The modern Python distribution is `is-msgs-sea`; imports remain
 `is_msgs`. It supports Python 3.10–3.14 and Protobuf 5–7. See the
 [migration guide](MIGRATION.md) and [compatibility policy](COMPATIBILITY.md).
 
@@ -80,12 +62,13 @@ uv add is-msgs-sea
 ## Publicando novas versões
 
 Primeiro, atualize a versão no arquivo `.version`, seguindo o padrão `^[0-9]+\.[0-9]+\.[0-9]+$`.
+Python, Conan e CMake usam esse arquivo como fonte única da versão do pacote.
 
 #### Etapas após a publicação
 
-Após publicar `is_msgs` em qualquer linguagem, a documentação dos protobufs em
-`docs/README.md` será atualizada automaticamente. Faça commit e push dessas alterações
-e crie uma tag Git para a nova versão:
+Revise `docs/README.md` e `docs/ROS_FIELDS.md` quando os schemas mudarem: os
+workflows atuais não regeneram a documentação automaticamente. Faça commit e
+push das alterações e crie uma tag Git para a nova versão:
 
 ```shell
 git tag v$(cat .version)
@@ -98,7 +81,8 @@ Para publicar uma nova versão Python, consulte [python/README.md](python/README
 
 ### C++
 
-> Under construction
+O Conan e o CMake usam a mesma versão do Python. Consulte [PUBLISHING.md](PUBLISHING.md)
+para validar e criar o pacote C++ e consumir a instalação com `find_package`.
 
 ## Acknowledgements
 

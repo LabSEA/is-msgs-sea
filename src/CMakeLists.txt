@@ -4,15 +4,14 @@ set(module "msgs")
 set(target ${author}-${module})
 set(include_dir ${author}/${module})
 
-list(APPEND protos
-  "is/msgs/camera.proto"
-  "is/msgs/common.proto"
-  "is/msgs/image.proto"
-  "is/msgs/power.proto"
-  "is/msgs/robot.proto"
-  "is/msgs/validate.proto"
-  "is/msgs/tests.proto"
-)
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/schema_manifest.txt" protos)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+  "${CMAKE_CURRENT_SOURCE_DIR}/schema_manifest.txt")
+foreach(proto IN LISTS protos)
+  if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${proto}")
+    message(FATAL_ERROR "Schema listed in schema_manifest.txt does not exist: ${proto}")
+  endif()
+endforeach()
 
 list(APPEND interfaces
   "is/utils/ostream.hpp"
@@ -58,7 +57,7 @@ endforeach()
 add_library(${target} ${sources})
 
 # compile options
-set_property(TARGET ${target} PROPERTY CXX_STANDARD 11)
+target_compile_features(${target} PUBLIC cxx_std_11)
 
 # link dependencies
 target_link_libraries(
@@ -76,10 +75,18 @@ target_include_directories(
  PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}> # for headers when building
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}> # for generated files in build mode
-  $<INSTALL_INTERFACE:include/${include_dir}> # for clients in install mode
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}> # preserves is/msgs and is/utils paths
 )
 
-install(FILES ${interfaces} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${include_dir})
+foreach(interface IN LISTS interfaces)
+  if(IS_ABSOLUTE "${interface}")
+    file(RELATIVE_PATH relative_interface "${CMAKE_CURRENT_BINARY_DIR}" "${interface}")
+  else()
+    set(relative_interface "${interface}")
+  endif()
+  get_filename_component(interface_directory "${relative_interface}" DIRECTORY)
+  install(FILES "${interface}" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${interface_directory}")
+endforeach()
 
 set(export_targets      ${target}Targets)
 set(export_targets_file ${export_targets}.cmake)
@@ -107,6 +114,17 @@ install(
 # install export config
 install(FILES ${export_config_file} DESTINATION ${export_destination})
 
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/${target}ConfigVersion.cmake"
+  VERSION "${PROJECT_VERSION}"
+  COMPATIBILITY SameMajorVersion
+)
+install(
+  FILES "${CMAKE_CURRENT_BINARY_DIR}/${target}ConfigVersion.cmake"
+  DESTINATION ${export_destination}
+)
+
 # create library alias (less error prone to typos)
 set(target_alias ${export_namespace}${target})
 add_library(${target_alias} ALIAS ${target})
@@ -118,13 +136,25 @@ add_library(${target_alias} ALIAS ${target})
 if (build_tests)
   enable_testing()
   find_package(GTest REQUIRED)
-  find_package(OpenCV REQUIRED)
+  if(TARGET GTest::gtest)
+    set(is_msgs_gtest_targets GTest::gtest GTest::gtest_main)
+  else()
+    set(is_msgs_gtest_targets GTest::GTest GTest::Main)
+  endif()
+  find_package(OpenCV REQUIRED COMPONENTS core)
+  if(TARGET opencv_core)
+    set(is_msgs_opencv_target opencv_core)
+  elseif(TARGET opencv::opencv)
+    set(is_msgs_opencv_target opencv::opencv)
+  else()
+    message(FATAL_ERROR "OpenCV did not provide a supported core target")
+  endif()
   
   function(gtest_add target source)
     add_executable(${target} ${source})
     set_property(TARGET ${target} PROPERTY CXX_STANDARD 11)
 
-    target_link_libraries(${target} PRIVATE GTest::GTest GTest::Main ${target_alias} Boost::filesystem opencv::opencv)
+    target_link_libraries(${target} PRIVATE ${is_msgs_gtest_targets} ${target_alias} Boost::filesystem ${is_msgs_opencv_target})
     target_include_directories(${target} PRIVATE ${OpenCV_INCLUDE_DIRS})
       
     add_test(NAME ${target} COMMAND $<TARGET_FILE:${target}>)

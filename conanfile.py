@@ -2,14 +2,14 @@ import os
 import re
 
 from conan import ConanFile
-from conan.tools.files import copy, rmdir, load
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
+from conan.tools.files import copy, load, rmdir
 
 
 class IsMsgsConan(ConanFile):
     name = "is-msgs"
+    package_type = "library"
     license = "MIT"
-    version = "1.1.17"
     url = "https://github.com/LabSEA/is-msgs-sea"
     description = "Repository containing the schema for standard ::is messages"
     settings = "os", "compiler", "build_type", "arch"
@@ -23,23 +23,26 @@ class IsMsgsConan(ConanFile):
         "fPIC": True,
         "build_tests": False,
     }
-    exports_sources = "*"
+    exports = ".version"
+    exports_sources = ".version", "CMakeLists.txt", "src/*", "LICENSE.txt"
 
     @property
     def version_pattern(self):
         return r"^[0-9]+\.[0-9]+\.[0-9]+$"
 
     def set_version(self):
-        self.version = load(self, ".version").strip()
-        if re.match(self.version_pattern, self.version) is None:
+        self.version = load(self, os.path.join(self.recipe_folder, ".version")).strip()
+        if re.fullmatch(self.version_pattern, self.version) is None:
             raise RuntimeError(
-                f"Package version must matches the pattern '{self.version_pattern}'"
+                f"Package version must match the pattern '{self.version_pattern}'"
             )
 
     def requirements(self):
         self.requires("fmt/5.3.0")
         self.requires("boost/1.80.0")
-        self.requires("protobuf/3.20.0", force=True)
+        self.requires(
+            "protobuf/3.20.0", force=True, transitive_headers=True, transitive_libs=True
+        )
         if self.options.build_tests:
             self.requires("gtest/1.10.0")
             self.requires("opencv/4.5.5")
@@ -99,14 +102,9 @@ class IsMsgsConan(ConanFile):
         self.cpp_info.set_property("cmake_file_name", "is-msgs")
         self.cpp_info.set_property("cmake_target_name", "is-msgs::is-msgs")
         self.cpp_info.set_property("pkg_config_name", "is-msgs")
-        self.cpp_info.components["is-msgs"].libs = ["is-msgs"]
-        self.cpp_info.components["is-msgs"].requires = [
+        self.cpp_info.libs = ["is-msgs"]
+        self.cpp_info.requires = [
             "fmt::fmt",
             "protobuf::libprotobuf",
-            "boost::boost",
+            "boost::filesystem",
         ]
-        if self.options.build_tests:
-            self.cpp_info.components["is-msgs"].requires.extend([
-                "gtest::gtest",
-                "opencv::opencv",
-            ])

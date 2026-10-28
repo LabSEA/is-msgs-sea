@@ -69,16 +69,20 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-envlist = py310,py311,py312,py313,py314,lint
+envlist = py310,py311,py312,py313,py314,codegen,lint
 
 [testenv]
-extras = dev,codegen
+extras = dev
 commands = pytest {posargs:python/tests}
+
+[testenv:codegen]
+basepython = python3.13
+extras = dev,codegen
 
 [testenv:lint]
 basepython = python3.10
 extras = dev
 commands =
-    ruff check python scripts
+    ruff check python scripts conanfile.py package.py test_package/conanfile.py
     basedpyright python/tests/unit/test_is_msgs.py
 """

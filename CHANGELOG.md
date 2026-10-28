@@ -1,5 +1,37 @@
 # Registro de alterações
 
+## 1.3.2
+
+- Executa testes com codegen na CI e compara descritores com a última release
+  estável alcançável, além do baseline histórico.
+- Adiciona CI C++ para builds estáticos e compartilhados, CTest, instalação
+  CMake e consumo de pacotes Conan com `test_package`.
+- Corrige a propagação pública de Protobuf e a dependência Boost.Filesystem
+  nos metadados Conan; evita conflito entre target agregado e componente.
+- Substitui o bootstrap global por ferramentas fixadas em ambiente virtual
+  e cache Conan locais, com validação correta da versão do CMake.
+- Valida dimensões, tipos, canais e tamanhos de buffers nas conversões OpenCV,
+  incluindo views, cópias e matrizes não contíguas nos testes.
+- Aceita os targets OpenCV/GTest fornecidos por instalações nativas e Conan.
+- Amplia o checker para extensões, presença, mapas, oneofs, reservas, serviços
+  e opções de arquivo; aceita reordenações semanticamente equivalentes.
+- Gera Python em staging antes de substituir artefatos, remove arquivos stale
+  após sucesso e transforma imports com comentários, whitespace, public e weak.
+- Compartilha a lista explícita de schemas com CMake, incluindo ros.proto em C++.
+- Preserva caminhos is/msgs e is/utils na instalação CMake e resolve fmt em
+  downstreams. Não atualiza a linha Protobuf C++.
+- Faz a publicação depender da validação e reutiliza os mesmos artefatos testados.
+- Documenta JavaScript como não suportado, preservando os arquivos históricos.
+- Unifica a versão Python, Conan e CMake em `.version` e instala metadados
+  para consultas de versão com `find_package(is-msgs 1.3.2 CONFIG REQUIRED)`.
+- Limita a exportação de fontes Conan aos arquivos necessários para compilar,
+  evitando incluir o histórico Git, caches e distribuições Python antigas.
+- Adiciona `AGENTS.md` com convenções de desenvolvimento e validação de releases.
+
+## 1.3.1
+
+- Regenera os módulos de imagem com a versão fixada do gerador Protobuf.
+
 ## 1.3.0
 
 - Added acquisition `header`, monotonic `sequence`, and `timestamp_source` to
